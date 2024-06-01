@@ -34,11 +34,18 @@ async function run() {
     await client.connect();
 
     const campCollection = client.db("medicalcampDb").collection("camp");
+    const reviewCollection = client.db("medicalcampDb").collection("reviews");
 
     app.get("/camp", async (req, res) => {
       const result = await campCollection.find().toArray();
       res.send(result);
     });
+
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
