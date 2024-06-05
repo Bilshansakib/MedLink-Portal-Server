@@ -38,6 +38,9 @@ async function run() {
     const userCollection = client.db("medicalcampDb").collection("users");
     const reviewCollection = client.db("medicalcampDb").collection("reviews");
     const campsCollection = client.db("medicalcampDb").collection("camps");
+    const participatorCollection = client
+      .db("medicalcampDb")
+      .collection("participator");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -152,6 +155,41 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await campsCollection.deleteOne(query);
+      res.send(result);
+    });
+    // manage camp (get update id)
+    app.get("/camps/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await campsCollection.findOne(query);
+      res.send(result);
+    });
+    // manage camp (update data)
+    app.patch("/camps/:id", async (req, res) => {
+      const data = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          CampName: data.CampName,
+          Image: data.Image,
+          CampFees: parseFloat(data.CampFees),
+          DateTime: data.DateTime,
+
+          HealthcareProfessional: data.HealthcareProfessional,
+          ParticipantCount: data.ParticipantCount,
+          Description: data.Description,
+          Location: data.Location,
+        },
+      };
+      const result = await campsCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    // participator api
+    app.post("/participator", async (req, res) => {
+      const participator = req.body;
+      const result = await participatorCollection.insertOne(participator);
       res.send(result);
     });
 
