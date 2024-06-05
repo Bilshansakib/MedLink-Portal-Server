@@ -193,6 +193,18 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/participator", async (req, res) => {
+      const result = await participatorCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.delete("/participator/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await participatorCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
