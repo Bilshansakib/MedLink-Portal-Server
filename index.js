@@ -3,6 +3,7 @@ const app = express();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 9000;
 
@@ -38,6 +39,9 @@ async function run() {
     const userCollection = client.db("medicalcampDb").collection("users");
     const reviewCollection = client.db("medicalcampDb").collection("reviews");
     const campsCollection = client.db("medicalcampDb").collection("camps");
+    const registeredCollection = client
+      .db("medicalcampDb")
+      .collection("registered");
     const participatorCollection = client
       .db("medicalcampDb")
       .collection("participator");
@@ -197,12 +201,57 @@ async function run() {
       const result = await participatorCollection.find().toArray();
       res.send(result);
     });
+    app.get("/participator/:email", async (req, res) => {
+      // const query = { email: req.params.email };
+      const email = req.params.email;
+      const query = { "Participator.email": email };
+      console.log(query);
+      const result = await participatorCollection.find(query).toArray();
+      res.send(result);
+      console.log(result);
+    });
+    // ------.......>...
 
+    app.post("/registered", async (req, res) => {
+      const participator = req.body;
+      const result = await registeredCollection.insertOne(participator);
+      res.send(result);
+    });
+    app.get("/registered", async (req, res) => {
+      const result = await registeredCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/registered/:email", async (req, res) => {
+      // const query = { email: req.params.email };
+      const email = req.params.email;
+      const query = { "Participator.email": email };
+      console.log(query);
+      const result = await registeredCollection.find(query).toArray();
+      res.send(result);
+      console.log(result);
+    });
+    // ---------
     app.delete("/participator/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await participatorCollection.deleteOne(query);
       res.send(result);
+    });
+    // .............>>>>payment
+    app.post("/create-payment-intent", async (req, res) => {
+      const { CampFees } = req.body;
+      const amount = parseInt(CampFees * 100);
+      console.log(amount, "amount inside the intent");
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
     });
 
     app.get("/reviews", async (req, res) => {
@@ -227,5 +276,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`medical camp is running on port ${port}`);
+  console.log(`medical camp is running on port the ${port}`);
 });
