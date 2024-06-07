@@ -35,7 +35,6 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    const campCollection = client.db("medicalcampDb").collection("camp");
     const userCollection = client.db("medicalcampDb").collection("users");
     const reviewCollection = client.db("medicalcampDb").collection("reviews");
     const campsCollection = client.db("medicalcampDb").collection("camps");
@@ -45,6 +44,8 @@ async function run() {
     const participatorCollection = client
       .db("medicalcampDb")
       .collection("participator");
+
+    const paymentCollection = client.db("medicalcampDb").collection("payments");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -206,6 +207,7 @@ async function run() {
       const email = req.params.email;
       const query = { "Participator.email": email };
       console.log(query);
+
       const result = await participatorCollection.find(query).toArray();
       res.send(result);
       console.log(result);
@@ -225,10 +227,18 @@ async function run() {
       // const query = { email: req.params.email };
       const email = req.params.email;
       const query = { "Participator.email": email };
+      const regCount = req.body;
+
       console.log(query);
       const result = await registeredCollection.find(query).toArray();
       res.send(result);
       console.log(result);
+    });
+    app.delete("/registered/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await registeredCollection.deleteOne(query);
+      res.send(result);
     });
     // ---------
     app.delete("/participator/:id", async (req, res) => {
@@ -240,18 +250,62 @@ async function run() {
     // .............>>>>payment
     app.post("/create-payment-intent", async (req, res) => {
       const { CampFees } = req.body;
+      const { CampName } = req.body;
       const amount = parseInt(CampFees * 100);
       console.log(amount, "amount inside the intent");
 
       const paymentIntent = await stripe.paymentIntents.create({
+        CampName: CampName,
         amount: amount,
         currency: "usd",
         payment_method_types: ["card"],
       });
+      console.log(CampName);
 
       res.send({
         clientSecret: paymentIntent.client_secret,
       });
+    });
+
+    // app.post("/payments", async (req, res) => {
+    //   const payment = req.body;
+    //   const paymentResult = await paymentsCollection.insertOne(payment);
+
+    //   console.log("payment info", payment);
+    //   // delete
+    //   const query = {
+    //     _id: {
+    //       $in: payment.campIds.map((id) => new ObjectId(id)),
+    //     },
+    //   };
+    //   const deleteResult = await paymentsCollection.deleteMany(query);
+    //   res.send({ paymentResult, deleteResult });
+    //   console.log(paymentResult);
+    // });
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      //  carefully delete each item from the cart
+      console.log("payment info", payment);
+      const query = {
+        _id: {
+          $in: payment.campIds.map((id) => new ObjectId(id)),
+        },
+      };
+
+      const deleteResult = await paymentCollection.deleteMany(query);
+
+      res.send({ paymentResult, deleteResult });
+    });
+
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      const query = { email: req.params.email };
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
     });
 
     app.get("/reviews", async (req, res) => {
