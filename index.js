@@ -89,7 +89,12 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
-
+    // Get user role
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.findOne({ email });
+      res.send(result);
+    });
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
@@ -170,10 +175,11 @@ async function run() {
       res.send(result);
     });
     // manage camp (update data)
-    app.patch("/camps/:id", async (req, res) => {
+    app.put("/camps/:id", async (req, res) => {
       const data = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updatedDoc = {
         $set: {
           CampName: data.CampName,
@@ -187,7 +193,11 @@ async function run() {
           Location: data.Location,
         },
       };
-      const result = await campsCollection.updateOne(filter, updatedDoc);
+      const result = await campsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
       res.send(result);
     });
 
@@ -216,7 +226,16 @@ async function run() {
 
     app.post("/registered", async (req, res) => {
       const participator = req.body;
-      const result = await registeredCollection.insertOne(participator);
+      const updateDoc = {
+        $inc: {
+          ParticipantCount: 1,
+          Participant_Count: 1,
+        },
+      };
+      const result = await registeredCollection.insertOne(
+        participator,
+        updateDoc
+      );
       res.send(result);
     });
     app.get("/registered", async (req, res) => {
@@ -312,7 +331,67 @@ async function run() {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
+    // states for
+    app.get("/stats", async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const registered = await registeredCollection.estimatedDocumentCount();
 
+      // revenue call
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalRevenue: {
+                $sum: "$CampFees",
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+      res.send({ users, registered, revenue });
+      console.log({ users, registered, revenue });
+    });
+
+    // participators
+    app.get("/register-stats", async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $unwind: "$registeredCampIds",
+          },
+          {
+            $lookup: {
+              from: "camps",
+              localField: "registeredCampIds",
+              foreignField: "_id",
+              as: "Items",
+            },
+          },
+          // {
+          //   $unwind: "$Items",
+          // },
+          // {
+          //   $group: {
+          //     _id: "$Items.CampName",
+          //     quantity: { $sum: 1 },
+          //     revenue: { $sum: "$Items.CampFees" },
+          //   },
+          // },
+          // {
+          //   $project: {
+          //     _id: 0,
+          //     category: "$_id",
+          //     quantity: "$quantity",
+          //     revenue: "$revenue",
+          //   },
+          // },
+        ])
+        .toArray();
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
