@@ -131,6 +131,37 @@ async function run() {
       const result = await userCollection.deleteOne(query);
       res.send(result);
     });
+    // user modify
+    app.put("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email: email };
+      const options = { upsert: true };
+      const isExist = await usersCollection.findOne(query);
+      console.log("User ki ache ? ", isExist);
+      if (isExist) {
+        if (user?.status === "Requested") {
+          const result = await userCollection.updateOne(
+            query,
+            {
+              $set: user,
+            },
+            options
+          );
+          return res.send(result);
+        } else {
+          return res.send(isExist);
+        }
+      }
+      const result = await userCollection.updateOne(
+        query,
+        {
+          $set: { ...user, timestamp: Date.now() },
+        },
+        options
+      );
+      res.send(result);
+    });
     //  for admin making call
     app.patch(
       "/users/admin/:id",
@@ -157,7 +188,11 @@ async function run() {
     // add a camp
     app.post("/camps", async (req, res) => {
       const campaign = req.body;
-      const result = await campsCollection.insertOne(campaign);
+      const updatedDoc = {
+        $inc: { ParticipantCount: 1 },
+        $inc: { Participant_Count: 1 },
+      };
+      const result = await campsCollection.insertOne(campaign, updatedDoc);
       res.send(result);
     });
 
@@ -193,9 +228,13 @@ async function run() {
           Location: data.Location,
         },
       };
+      const increase = {
+        $inc: { ParticipantCount: 1 },
+      };
       const result = await campsCollection.updateOne(
         filter,
         updatedDoc,
+        increase,
         options
       );
       res.send(result);
@@ -313,7 +352,7 @@ async function run() {
         },
       };
 
-      const deleteResult = await paymentCollection.deleteMany(query);
+      const deleteResult = await registeredCollection.deleteMany(query);
 
       res.send({ paymentResult, deleteResult });
     });
@@ -324,6 +363,11 @@ async function run() {
         return res.status(403).send({ message: "forbidden access" });
       }
       const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/paidUser", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
       res.send(result);
     });
 
