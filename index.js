@@ -352,9 +352,9 @@ async function run() {
         },
       };
 
-      const deleteResult = await registeredCollection.deleteMany(query);
+      // const deleteResult = await registeredCollection.deleteMany(query);
 
-      res.send({ paymentResult, deleteResult });
+      res.send({ paymentResult });
     });
 
     app.get("/payments/:email", verifyToken, async (req, res) => {
@@ -370,7 +370,31 @@ async function run() {
       const result = await paymentCollection.find().toArray();
       res.send(result);
     });
+    app.delete("/paidUser/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await paymentCollection.deleteOne(query);
+      res.send(result);
+    });
 
+    //  for status changing
+    app.patch("/paidUser/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: "confirmed",
+        },
+      };
+      const result = await paymentCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    // review sector
+    app.post("/reviews", async (req, res) => {
+      const reviews = req.body;
+      const result = await reviewCollection.insertOne(reviews);
+      res.send(result);
+    });
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
