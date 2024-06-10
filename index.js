@@ -9,7 +9,12 @@ const port = process.env.PORT || 9000;
 
 // middleware
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://project-finale-f9ff7.firebaseapp.com",
+    "https://project-finale-f9ff7.web.app",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -33,7 +38,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const userCollection = client.db("medicalcampDb").collection("users");
     const reviewCollection = client.db("medicalcampDb").collection("reviews");
@@ -185,6 +190,21 @@ async function run() {
       const result = await campsCollection.find().toArray();
       res.send(result);
     });
+    // app.get("/camp/sort", async (req, res) => {
+    //   const filter = req.query;
+    //   console.log(filter);
+    //   const query = {
+    //     title: { $regex: filter.search, $options: "i" },
+    //   };
+    //   const options = {
+    //     sort: {
+    //       CampFees: filter.sort === "asc" ? 1 : -1,
+    //     },
+    //   };
+    //   const cursor = campsCollection.find(query, options);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
     // add a camp
     app.post("/camps", async (req, res) => {
       const campaign = req.body;
@@ -352,9 +372,9 @@ async function run() {
         },
       };
 
-      // const deleteResult = await registeredCollection.deleteMany(query);
+      const deleteResult = await registeredCollection.deleteMany(query);
 
-      res.send({ paymentResult });
+      res.send({ paymentResult, deleteResult });
     });
 
     app.get("/payments/:email", verifyToken, async (req, res) => {
@@ -438,9 +458,9 @@ async function run() {
               as: "Items",
             },
           },
-          // {
-          //   $unwind: "$Items",
-          // },
+          {
+            $unwind: "$Items",
+          },
           // {
           //   $group: {
           //     _id: "$Items.CampName",
@@ -461,10 +481,10 @@ async function run() {
       res.send(result);
     });
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
